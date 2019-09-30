@@ -1,0 +1,14 @@
+package ${package_name}.dao;
+
+import ${package_name}.model.${model};
+import tk.mybatis.mapper.common.Mapper;
+
+/**
+ * ${model}Mapper
+ *
+ * @author ${author}
+ * @date  ${createDate}
+ */
+public interface ${model}Mapper extends Mapper<${model}> {
+
+}

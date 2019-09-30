@@ -1,0 +1,95 @@
+package ${package_name}.service.impl;
+
+import ${package_name}.model.${model};
+import ${package_name}.dao.${model}Mapper;
+import ${package_name}.service.${model}Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import tk.mybatis.mapper.entity.Example;
+
+import java.util.List;
+
+/**
+* ${model}Service
+*
+* @author ${author}
+* @date  ${createDate}
+*/
+@Service
+@Transactional(rollbackFor = Exception.class)
+public class ${model}ServiceImpl  implements ${model}Service {
+
+    @Autowired
+    ${model}Mapper ${mapper}Mapper;
+
+
+    /**
+     * 新增#if("${table_annotation}"=="")${table_annotation}#else${model}#end 信息
+     *
+     * @param ${entity} ${table_annotation}
+     *
+     */
+     @Override
+     public void insert${model}Selective(${model} ${entity}) {
+        // 执行新增
+        int rows = ${mapper}Mapper.insertSelective($entity);
+        // 验证是否成功
+        if(rows==0){
+
+        }
+     }
+
+    /**
+     * 编辑#if("${table_annotation}"=="")${table_annotation}#else${model}#end 信息
+     *
+     * @param ${entity} ${table_annotation}
+     *
+     */
+     @Override
+     public void update${model}SelectiveByPrimaryKey(${model} ${entity}) {
+        // 执行编辑
+        int rows = ${mapper}Mapper.updateByPrimaryKeySelective($entity);
+        // 验证是否成功
+        if(rows==0){
+
+        }
+     }
+
+    /**
+     * 根据主键删除#if("${table_annotation}"=="")${table_annotation}#else${model}#end 信息
+     *
+     * @param ids 主键
+     *
+     */
+    @Override
+    public void delete${model}ByPrimaryKeys(Integer[] ids) {
+        // 循环进行删除信息
+        for(Integer id : ids){
+            // 执行删除
+            int rows = ${mapper}Mapper.deleteByPrimaryKey(id);
+            // 验证是否成功
+            if(rows==0){
+
+            }
+        }
+    }
+
+    /**
+     * 查询#if("${table_annotation}"=="")${table_annotation}#else${model}#end 信息
+     *
+     * @param example 条件集合
+     * @return list
+     */
+    @Override
+    public List<${model}> select${model}By${model}Example(Example example) {
+        // 数据查询
+        List<${model}> ${entity}List = ${mapper}Mapper.selectByExample(example);
+        // 返回查询数据
+        return ${entity}List;
+    }
+
+
+
+
+}

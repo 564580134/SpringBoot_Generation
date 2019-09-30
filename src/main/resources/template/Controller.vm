@@ -1,0 +1,232 @@
+package ${package_name}.controller;
+
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
+import ${package_name}.model.${model};
+import ${package_name}.service.${model}Service;
+import com.mybatis.generation.util.result.ResponseResult;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+import tk.mybatis.mapper.entity.Example;
+
+import java.util.List;
+
+
+/**
+ * ${model}Controller
+ *
+ * @author ${author}
+ * @date  ${createDate}
+ */
+
+@Api(tags = "#if(!${table_annotation})${table_annotation}#else${model}#end", description = "${model}Controller")
+@RestController
+@RequestMapping("/${model}/")
+public class ${model}Controller {
+
+
+    @Autowired
+    public ${model}Service ${entity}Service;
+
+
+    @ApiOperation("新增")
+    @PostMapping("insert")
+    public ResponseResult insert(@ModelAttribute ${model} ${entity}) {
+        // 执行新增
+        ${entity}Service.insert${model}Selective(${entity});
+        // 返回
+        return ResponseResult.createBySuccess();
+    }
+
+    @ApiOperation("编辑")
+    @PostMapping("update")
+    public ResponseResult update(@ModelAttribute ${model} ${entity}) {
+        // 执行编辑
+        ${entity}Service.update${model}SelectiveByPrimaryKey(${entity});
+        // 返回
+        return ResponseResult.createBySuccess();
+    }
+
+    @ApiOperation("编辑")
+    @PostMapping("delete")
+    @ApiImplicitParam(name = "ids", value = "主键数组", type = "Integer[]")
+    public ResponseResult delete(@RequestParam(value = "ids") Integer[] ids) {
+        // 执行删除
+        ${entity}Service.delete${model}ByPrimaryKeys(ids);
+        // 返回
+        return ResponseResult.createBySuccess();
+    }
+
+    @ApiOperation("查询")
+    @PostMapping("select")
+    @ApiImplicitParams({
+        @ApiImplicitParam(name = "pageNum", value = "pageNum", type = "Integer"),
+        @ApiImplicitParam(name = "pageSize", value = "pageSize", type = "Integer")
+    })
+    public ResponseResult select(
+        @RequestParam(value = "pageNum", defaultValue = "0") Integer pageNum,
+        @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
+        // 设置分页属性
+        PageHelper.startPage(pageNum, pageSize);
+        // 查询
+        List<${model}> ${entity}List = ${entity}Service.select${model}By${model}Example(new Example(${model}.class));
+        // 返回
+        return ResponseResult.createBySuccess(new PageInfo<>(${entity}List));
+    }
+
+@ApiOperation("导入活跃商户")
+@PostMapping("importMerchant")
+@ApiImplicitParams({
+@ApiImplicitParam(name = "file", value = "导入的Excel", paramType = "MultipartFile"),
+@ApiImplicitParam(name = "token", value = "当前用户", paramType = "String")})
+
+public ServerResponse importMerchant(MultipartFile file, String token) throws IOException {
+String str = null;
+// 验证参数
+if (StringUtils.isBlank(token)) {
+return ServerResponse.createByError("请先登录");
+}
+// 获取当前用户
+User user = JwtUtils.unsign(token, User.class);
+if (user == null) {
+return ServerResponse.createByError("请先登录");
+}
+String fileType = file.getOriginalFilename().split("\\.")[1];
+// 获取文件
+if (file == null) {
+return ServerResponse.createByError("请选择数据文件");
+} else if (!SUFFIX_1.equals(fileType) && !SUFFIX_2.equals(fileType)) {
+return ServerResponse.createByErrorMessage("文件格式错误");
+}
+if (!file.getOriginalFilename().equals("activeMerchant.xls") && !file.getOriginalFilename().equals("activeMerchant.xlsx")) {
+return ServerResponse.createByErrorMessage("请选择正确数据文件");
+}
+// 读取文件
+List<Map<String, Object>> readAll = ExcelUtil.getReader(file.getInputStream()).readAll();
+if (readAll != null) {
+int a = 0;
+// 验证数据是否完整
+for (int i = 0; i < readAll.size(); i++) {
+try {
+str = readAll.get(i).get("商户编号").toString();
+} catch (NullPointerException e) {
+return ServerResponse.createByErrorMessage("请选择数据文件");
+}
+a = i + 1;
+// 验证是否符合规范
+if (!Pattern.matches(REG, str)) {
+return ServerResponse.createByErrorMessage("第" + a + "条商户编号不符合规范");
+}
+// 验证重复
+int rows = activeMerchantService.repeat(str);
+// 判断
+if (rows > 0) {
+return ServerResponse.createByErrorMessage("第" + a + "条商户信息已存在");
+}
+}
+// 新增
+activeMerchantService.insertMerchantData(readAll, user);
+return ServerResponse.createBySuccess();
+} else {
+return ServerResponse.createByErrorMessage("请选择正确的文件");
+}
+}
+
+
+@ApiOperation("导出活跃商户")
+@PostMapping("exportMerchant")
+@ApiImplicitParams({
+@ApiImplicitParam(name = "ids", value = "选中的商户编号", paramType = "integer[]"),
+@ApiImplicitParam(name = "token", value = "当前用户", paramType = "String"),
+})
+public void exportMerchant(Integer[] ids, String token, HttpServletResponse response) throws IOException {
+// 当前用户
+User user = JwtUtils.unsign(token, User.class);
+if (user == null) {
+throw new CustomException(ExceptionEnum.EXCEL_CHECK_DATE_EXCEPTION);
+}
+if (ids == null || ids.length == 0) {
+ids = null;
+}
+// 参数定义
+List<ActiveMerchant> list = null;
+    // 查询数据
+    switch (user.getRoles().getRoleId()) {
+    case 0:
+    list = activeMerchantService.exportActiveMerchantByExample(ids, null, null);
+    break;
+    case 1:
+    list = activeMerchantService.exportActiveMerchantByExample(ids, null, null);
+    break;
+    case 2:
+    list = activeMerchantService.exportActiveMerchantByExample(ids, user.getOrganizationId(), user.getUserId());
+    break;
+    case 3:
+    list = activeMerchantService.exportActiveMerchantByExample(ids, user.getOrganizationId(), null);
+    break;
+    case 4:
+    list = activeMerchantService.exportActiveMerchantByExample(ids, user.getOrganizationId(), null);
+    break;
+    case 5:
+    list = activeMerchantService.exportActiveMerchantByExample(ids, user.getOrganizationId(), null);
+    break;
+    case 6:
+    list = activeMerchantService.exportActiveMerchantByExample(ids, user.getOrganizationId(), user.getUserId());
+    break;
+    default:
+    list = null;
+    }
+    // 创建写出对象
+    ExcelWriter writer = ExcelUtil.getWriter();
+    //自定义标题别名
+    writer.addHeaderAlias("id", "编号").setColumnWidth(0, 10);
+    writer.addHeaderAlias("merchantCode", "商户编号").setColumnWidth(1, 25);
+    writer.addHeaderAlias("merchantName", "商户名称").setColumnWidth(2, 35);
+    ;
+    writer.addHeaderAlias("userId", "业务员编号").setColumnWidth(3, 25);
+    ;
+    writer.addHeaderAlias("userName", "业务员名称").setColumnWidth(4, 25);
+    ;
+    writer.addHeaderAlias("organizationId", "组织编号").setColumnWidth(5, 20);
+    ;
+    writer.addHeaderAlias("organizationName", "组织名称").setColumnWidth(6, 35);
+    ;
+    writer.addHeaderAlias("createTime", "创建时间").setColumnWidth(7, 30);
+
+    // 将数据写入文件
+    writer.write(CollUtil.newArrayList(list));
+    // 设置返回的文件头
+    response.setContentType("application/vnd.ms-excel;charset=utf-8");
+    response.setHeader("Content-Disposition", "attachment;filename=ActiveMerchant.xls");
+    ServletOutputStream out = response.getOutputStream();
+    writer.flush(out);
+    // 关闭writer，释放内存
+    writer.close();
+    }
+
+
+    @ApiOperation("查询商户编号是否已经存在")
+    @PostMapping("repeat")
+    @ApiImplicitParam(name = "merchantCode", value = "商户编号", paramType = "String")
+    public ServerResponse repeat(String merchantCode) {
+    // 验证参数
+    if (StringUtils.isBlank(merchantCode)) {
+    return ServerResponse.createByError("参数异常");
+    }
+    // 查询
+    int rows = activeMerchantService.repeat(merchantCode);
+    // 判断返回
+    if (rows == 0) {
+    return ServerResponse.createBySuccess();
+    } else {
+    return ServerResponse.createByError();
+    }
+    }
+
+
+
+    }
